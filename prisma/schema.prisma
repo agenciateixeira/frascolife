@@ -1,5 +1,5 @@
 // Prisma Schema para CRM - FrascoLife
-// Otimizado para 1M+ registros de CNPJ
+// CRM Completo estilo Salesforce
 
 generator client {
   provider = "prisma-client-js"
@@ -10,164 +10,775 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Tabela principal de empresas
-model Company {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ============================================
+// MÓDULO: USUÁRIOS E PERMISSÕES
+// ============================================
 
-  // Identificação
-  cnpj              String  @unique @db.Text
-  cnpjBase          String  @db.Text
-  cnpjOrder         String  @db.Text
-  cnpjDv            String  @db.Text
+model User {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  // Dados cadastrais
-  matrizFilial      String  @db.Text
-  razaoSocial       String? @db.Text
-  nomeFantasia      String? @db.Text
-  situacaoCadastral String  @db.Text
-  dataSituacao      String? @db.Text
-  dataAbertura      String? @db.Text
+  // Dados básicos (Supabase Auth)
+  supabaseId    String    @unique
+  email         String    @unique
+  fullName      String?
+  avatar        String?
+  phone         String?
 
-  // Atividade econômica
-  cnaePrincipal     String? @db.Text
-  cnaeSecundario    String? @db.Text
-  cnaesSecundarios  String? @db.Text @map("cnaes_secundarios")
-  naturezaJuridica  String? @db.Text @map("natureza_juridica")
-  porte             String? @db.Text
-  capitalSocial     String? @db.Text @map("capital_social")
+  // Permissões e Acesso
+  role          UserRole  @default(SALES_REP)
+  teamId        String?
+  team          Team?     @relation(fields: [teamId], references: [id])
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+
+  // Relacionamentos
+  assignedLeads     Lead[]
+  activities        Activity[]
+  calls             Call[]
+  emails            Email[]
+  whatsappMessages  WhatsAppMessage[]
+  tasks             Task[]
+  notes             Note[]
+  campaigns         Campaign[]
+  assignedOpportunities Opportunity[]
+
+  @@index([supabaseId])
+  @@index([teamId])
+  @@index([role])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN           // Acesso total
+  MANAGER         // Gerente de equipe
+  SALES_REP       // Vendedor
+  SDR             // Sales Development Rep
+  VIEWER          // Apenas visualização
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String
+  description String?
+  color       String?  // Para UI
+
+  members     User[]
+  campaigns   Campaign[]
+
+  @@map("teams")
+}
+
+// ============================================
+// MÓDULO: LEADS E CONTAS
+// ============================================
+
+model Lead {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Dados da Empresa (CNPJ)
+  cnpj              String   @unique @db.Text
+  cnpjBase          String   @db.Text
+  cnpjOrder         String   @db.Text
+  cnpjDv            String   @db.Text
+  razaoSocial       String?  @db.Text
+  nomeFantasia      String?  @db.Text
+  situacaoCadastral String   @db.Text
+  cnaePrincipal     String?  @db.Text
+  cnaeSecundario    String?  @db.Text
+  cnaesSecundarios  String?  @db.Text @map("cnaes_secundarios")
+  porte             String?  @db.Text
+  naturezaJuridica  String?  @db.Text @map("natureza_juridica")
+  capitalSocial     String?  @db.Text @map("capital_social")
+  dataAbertura      String?  @db.Text
+  dataSituacao      String?  @db.Text
   dataSituacaoCadastral String? @db.Text @map("data_situacao_cadastral")
+  matrizFilial      String   @db.Text
 
   // Endereço
-  tipoLogradouro    String? @db.Text
-  logradouro        String? @db.Text
-  numero            String? @db.Text
-  complemento       String? @db.Text
-  bairro            String? @db.Text
-  cep               String? @db.Text
-  uf                String? @db.Text
-  municipio         String? @db.Text
+  tipoLogradouro    String?  @db.Text
+  logradouro        String?  @db.Text
+  numero            String?  @db.Text
+  complemento       String?  @db.Text
+  bairro            String?  @db.Text
+  cep               String?  @db.Text
+  municipio         String?  @db.Text
+  uf                String?  @db.Text
 
-  // Contatos
-  ddd1              String? @db.Text
-  telefone1         String? @db.Text
-  ddd2              String? @db.Text
-  telefone2         String? @db.Text
-  dddFax            String? @db.Text
-  fax               String? @db.Text
-  email             String? @db.Text
+  // Contato Empresa
+  ddd1              String?  @db.Text
+  telefone1         String?  @db.Text
+  ddd2              String?  @db.Text
+  telefone2         String?  @db.Text
+  dddFax            String?  @db.Text
+  fax               String?  @db.Text
+  email             String?  @db.Text
 
-  // Relacionamentos com CRM
-  callLogs          CallLog[]
-  campaigns         CampaignCompany[]
-  tags              CompanyTag[]
+  // CRM Fields (NOVOS)
+  stage         LeadStage    @default(NEW)
+  score         Int          @default(0)        // 0-100
+  source        LeadSource   @default(MANUAL)
 
-  // Índices para performance
+  // Relacionamento com vendedor
+  assignedToId  String?
+  assignedTo    User?        @relation(fields: [assignedToId], references: [id])
+  assignedAt    DateTime?
+
+  // Contato Principal (Pessoa)
+  contactName       String?  @db.Text
+  contactRole       String?  @db.Text
+  contactPhone      String?  @db.Text
+  contactEmail      String?  @db.Text
+  contactLinkedIn   String?  @db.Text
+
+  // Qualificação
+  isQualified       Boolean   @default(false)
+  qualifiedAt       DateTime?
+  disqualifiedReason String? @db.Text
+
+  // Estimativas
+  estimatedRevenue  Decimal?  @db.Decimal(12, 2)
+  estimatedCloseDate DateTime?
+  probability       Int?      // 0-100%
+
+  // Relacionamentos
+  activities        Activity[]
+  calls             Call[]
+  emails            Email[]
+  whatsappMessages  WhatsAppMessage[]
+  tasks             Task[]
+  notes             Note[]
+  tags              LeadTag[]
+  opportunities     Opportunity[]
+  campaignLeads     CampaignLead[]
+
+  @@index([stage])
+  @@index([assignedToId])
+  @@index([score])
   @@index([uf])
   @@index([cnaePrincipal])
   @@index([situacaoCadastral])
   @@index([matrizFilial])
   @@index([municipio])
   @@index([cnpjBase])
-  @@map("companies")
+  @@map("leads")
 }
 
-// Histórico de ligações (Cold Calls)
-model CallLog {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
+enum LeadStage {
+  NEW              // Novo lead
+  CONTACTED        // Já foi contatado
+  QUALIFIED        // Qualificado
+  PROPOSAL         // Proposta enviada
+  NEGOTIATION      // Em negociação
+  WON              // Ganho
+  LOST             // Perdido
+  NURTURING        // Nutrição
+}
 
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+enum LeadSource {
+  MANUAL           // Adicionado manualmente
+  IMPORT           // Importação CSV
+  API              // Via API
+  WEBSITE          // Site/Landing page
+  REFERRAL         // Indicação
+  COLD_CALL        // Cold calling
+  EVENT            // Evento/Feira
+  SOCIAL_MEDIA     // Redes sociais
+}
 
-  status     String   @db.VarChar(50) // answered, no_answer, voicemail, busy, failed
-  duration   Int?     // Duração em segundos
-  recordingUrl String? @db.Text // URL da gravação no S3
-  transcription String? @db.Text // Transcrição da IA
-  sentiment  String?  @db.VarChar(50) // positive, neutral, negative
+// ============================================
+// MÓDULO: PIPELINE E OPORTUNIDADES
+// ============================================
 
-  notes      String?  @db.Text
-  aiSummary  String?  @db.Text // Resumo gerado pela IA
+model Opportunity {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@index([companyId])
+  name        String   @db.Text
+  description String?  @db.Text
+
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  stage       OpportunityStage @default(PROSPECTING)
+  probability Int      @default(10)
+
+  value       Decimal  @db.Decimal(12, 2)
+  expectedCloseDate DateTime?
+  closedAt    DateTime?
+  wonReason   String?  @db.Text
+  lostReason  String?  @db.Text
+
+  assignedToId String?
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
+
+  products    OpportunityProduct[]
+  activities  Activity[]
+
+  @@index([leadId])
+  @@index([stage])
+  @@index([assignedToId])
+  @@map("opportunities")
+}
+
+enum OpportunityStage {
+  PROSPECTING
+  QUALIFICATION
+  NEEDS_ANALYSIS
+  VALUE_PROPOSITION
+  DECISION_MAKERS
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String   @db.Text
+  description String?  @db.Text
+  sku         String?  @unique
+  price       Decimal  @db.Decimal(12, 2)
+  isActive    Boolean  @default(true)
+
+  opportunities OpportunityProduct[]
+
+  @@map("products")
+}
+
+model OpportunityProduct {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+
+  quantity      Int      @default(1)
+  unitPrice     Decimal  @db.Decimal(12, 2)
+  discount      Decimal  @default(0) @db.Decimal(5, 2)
+  total         Decimal  @db.Decimal(12, 2)
+
+  @@unique([opportunityId, productId])
+  @@map("opportunity_products")
+}
+
+// ============================================
+// MÓDULO: ATIVIDADES E TIMELINE
+// ============================================
+
+model Activity {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+
+  type        ActivityType
+  title       String   @db.Text
+  description String?  @db.Text
+
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  metadata    Json?
+
+  @@index([leadId])
+  @@index([opportunityId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  NOTE
+  TASK_COMPLETED
+  STAGE_CHANGED
+  ASSIGNED
+  STATUS_CHANGED
+}
+
+// ============================================
+// MÓDULO: COMUNICAÇÃO - CHAMADAS
+// ============================================
+
+model Call {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  direction   CallDirection
+  status      CallStatus
+  duration    Int?
+  startedAt   DateTime?
+  endedAt     DateTime?
+
+  twilioCallSid String? @unique
+  fromNumber    String  @db.Text
+  toNumber      String  @db.Text
+
+  recordingUrl  String?  @db.Text
+  recordingSid  String?  @db.Text
+
+  transcription String?  @db.Text
+  summary       String?  @db.Text
+  sentiment     Sentiment?
+  keywords      String[]
+
+  notes         String?  @db.Text
+  outcome       CallOutcome?
+
+  @@index([leadId])
+  @@index([userId])
   @@index([status])
   @@index([createdAt])
-  @@map("call_logs")
+  @@map("calls")
 }
 
-// Campanhas de Cold Calling
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CallStatus {
+  INITIATED
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  BUSY
+  NO_ANSWER
+  CANCELED
+}
+
+enum CallOutcome {
+  INTERESTED
+  NOT_INTERESTED
+  CALLBACK
+  WRONG_NUMBER
+  VOICEMAIL
+  MEETING_SCHEDULED
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+// ============================================
+// MÓDULO: COMUNICAÇÃO - EMAIL
+// ============================================
+
+model Email {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  direction   EmailDirection
+  subject     String   @db.Text
+  body        String   @db.Text
+  htmlBody    String?  @db.Text
+
+  fromEmail   String   @db.Text
+  toEmail     String   @db.Text
+  ccEmails    String[]
+  bccEmails   String[]
+
+  status      EmailStatus @default(DRAFT)
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  bouncedAt   DateTime?
+
+  opens       Int      @default(0)
+  clicks      Int      @default(0)
+
+  messageId   String?  @unique
+  templateId  String?  @db.Text
+
+  attachments EmailAttachment[]
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([status])
+  @@index([sentAt])
+  @@map("emails")
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum EmailStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  FAILED
+}
+
+model EmailAttachment {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+
+  emailId     String
+  email       Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  filename    String   @db.Text
+  filesize    Int
+  contentType String   @db.Text
+  url         String   @db.Text
+
+  @@index([emailId])
+  @@map("email_attachments")
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String   @db.Text
+  subject     String   @db.Text
+  body        String   @db.Text
+  htmlBody    String?  @db.Text
+
+  category    String?  @db.Text
+  isActive    Boolean  @default(true)
+
+  variables   String[]
+
+  @@map("email_templates")
+}
+
+// ============================================
+// MÓDULO: COMUNICAÇÃO - WHATSAPP
+// ============================================
+
+model WhatsAppMessage {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+
+  direction   MessageDirection
+  content     String   @db.Text
+  contentType MessageContentType @default(TEXT)
+
+  fromNumber  String   @db.Text
+  toNumber    String   @db.Text
+
+  status      MessageStatus @default(PENDING)
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
+  failedAt    DateTime?
+
+  twilioMessageSid String? @unique
+  errorMessage     String? @db.Text
+
+  mediaUrl    String?  @db.Text
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("whatsapp_messages")
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageContentType {
+  TEXT
+  IMAGE
+  DOCUMENT
+  AUDIO
+  VIDEO
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model WhatsAppTemplate {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String   @db.Text
+  content     String   @db.Text
+  category    String?  @db.Text
+  isActive    Boolean  @default(true)
+
+  twilioSid   String?  @unique
+
+  @@map("whatsapp_templates")
+}
+
+// ============================================
+// MÓDULO: TAREFAS E FOLLOW-UPS
+// ============================================
+
+model Task {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  title       String   @db.Text
+  description String?  @db.Text
+
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  assignedToId String
+  assignedTo   User    @relation(fields: [assignedToId], references: [id])
+
+  dueDate     DateTime
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus   @default(TODO)
+
+  completedAt DateTime?
+  completedBy String?  @db.Text
+
+  reminders   TaskReminder[]
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+model TaskReminder {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  remindAt    DateTime
+  method      ReminderMethod @default(EMAIL)
+  sent        Boolean  @default(false)
+  sentAt      DateTime?
+
+  @@index([taskId])
+  @@index([remindAt])
+  @@map("task_reminders")
+}
+
+enum ReminderMethod {
+  EMAIL
+  NOTIFICATION
+  WHATSAPP
+}
+
+// ============================================
+// MÓDULO: NOTAS
+// ============================================
+
+model Note {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  content     String   @db.Text
+
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  isPinned    Boolean  @default(false)
+
+  @@index([leadId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@map("notes")
+}
+
+// ============================================
+// MÓDULO: TAGS E SEGMENTAÇÃO
+// ============================================
+
+model Tag {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+
+  name        String   @unique
+  color       String   @db.Text
+  icon        String?  @db.Text
+
+  leads       LeadTag[]
+
+  @@map("tags")
+}
+
+model LeadTag {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  tagId       String
+  tag         Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, tagId])
+  @@index([leadId])
+  @@index([tagId])
+  @@map("lead_tags")
+}
+
+// ============================================
+// MÓDULO: CAMPANHAS
+// ============================================
+
 model Campaign {
   id          String   @id @default(cuid())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  name        String   @db.VarChar(255)
+  name        String   @db.Text
   description String?  @db.Text
-  status      String   @db.VarChar(50) // draft, active, paused, completed
 
-  // Filtros aplicados (JSON)
+  type        CampaignType
+  status      CampaignStatus @default(DRAFT)
+
+  startDate   DateTime?
+  endDate     DateTime?
+
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id])
+
   filters     Json?
 
-  // Stats
-  totalLeads  Int      @default(0)
-  called      Int      @default(0)
-  answered    Int      @default(0)
-  converted   Int      @default(0)
+  totalLeads      Int @default(0)
+  contactedLeads  Int @default(0)
+  qualifiedLeads  Int @default(0)
+  wonLeads        Int @default(0)
 
-  companies   CampaignCompany[]
+  leads       CampaignLead[]
 
+  @@index([ownerId])
+  @@index([teamId])
   @@index([status])
   @@map("campaigns")
 }
 
-// Relação Many-to-Many entre Campanha e Empresa
-model CampaignCompany {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
+enum CampaignType {
+  COLD_CALL
+  EMAIL
+  WHATSAPP
+  MULTI_CHANNEL
+}
 
-  campaignId String
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELED
+}
 
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+model CampaignLead {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  status     String   @default("pending") // pending, called, converted, rejected
-  priority   Int      @default(0)
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
-  @@unique([campaignId, companyId])
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  status      CampaignLeadStatus @default(PENDING)
+  priority    Int      @default(0)
+
+  contactedAt DateTime?
+  respondedAt DateTime?
+  outcome     String?  @db.Text
+
+  @@unique([campaignId, leadId])
   @@index([campaignId])
-  @@index([companyId])
+  @@index([leadId])
   @@index([status])
-  @@map("campaign_companies")
+  @@map("campaign_leads")
 }
 
-// Tags para segmentação
-model Tag {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-
-  name      String   @unique @db.VarChar(100)
-  color     String?  @db.VarChar(7) // Hex color
-
-  companies CompanyTag[]
-
-  @@map("tags")
-}
-
-// Relação Many-to-Many entre Tag e Empresa
-model CompanyTag {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-
-  companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  tagId     String
-  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@unique([companyId, tagId])
-  @@index([companyId])
-  @@index([tagId])
-  @@map("company_tags")
+enum CampaignLeadStatus {
+  PENDING
+  CONTACTED
+  RESPONDED
+  QUALIFIED
+  CONVERTED
+  SKIPPED
 }
