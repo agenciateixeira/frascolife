@@ -1,0 +1,168 @@
+// Prisma Schema para CRM - FrascoLife
+// Otimizado para 1M+ registros de CNPJ
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tabela principal de empresas
+model Company {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Identificação
+  cnpj              String  @unique @db.Text
+  cnpjBase          String  @db.Text
+  cnpjOrder         String  @db.Text
+  cnpjDv            String  @db.Text
+
+  // Dados cadastrais
+  matrizFilial      String  @db.Text
+  razaoSocial       String? @db.Text
+  nomeFantasia      String? @db.Text
+  situacaoCadastral String  @db.Text
+  dataSituacao      String? @db.Text
+  dataAbertura      String? @db.Text
+
+  // Atividade econômica
+  cnaePrincipal     String? @db.Text
+  cnaeSecundario    String? @db.Text
+
+  // Endereço
+  tipoLogradouro    String? @db.Text
+  logradouro        String? @db.Text
+  numero            String? @db.Text
+  complemento       String? @db.Text
+  bairro            String? @db.Text
+  cep               String? @db.Text
+  uf                String? @db.Text
+  municipio         String? @db.Text
+
+  // Contatos
+  ddd1              String? @db.Text
+  telefone1         String? @db.Text
+  ddd2              String? @db.Text
+  telefone2         String? @db.Text
+  dddFax            String? @db.Text
+  fax               String? @db.Text
+  email             String? @db.Text
+
+  // Relacionamentos com CRM
+  callLogs          CallLog[]
+  campaigns         CampaignCompany[]
+  tags              CompanyTag[]
+
+  // Índices para performance
+  @@index([uf])
+  @@index([cnaePrincipal])
+  @@index([situacaoCadastral])
+  @@index([matrizFilial])
+  @@index([municipio])
+  @@index([cnpjBase])
+  @@map("companies")
+}
+
+// Histórico de ligações (Cold Calls)
+model CallLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  status     String   @db.VarChar(50) // answered, no_answer, voicemail, busy, failed
+  duration   Int?     // Duração em segundos
+  recordingUrl String? @db.Text // URL da gravação no S3
+  transcription String? @db.Text // Transcrição da IA
+  sentiment  String?  @db.VarChar(50) // positive, neutral, negative
+
+  notes      String?  @db.Text
+  aiSummary  String?  @db.Text // Resumo gerado pela IA
+
+  @@index([companyId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("call_logs")
+}
+
+// Campanhas de Cold Calling
+model Campaign {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  status      String   @db.VarChar(50) // draft, active, paused, completed
+
+  // Filtros aplicados (JSON)
+  filters     Json?
+
+  // Stats
+  totalLeads  Int      @default(0)
+  called      Int      @default(0)
+  answered    Int      @default(0)
+  converted   Int      @default(0)
+
+  companies   CampaignCompany[]
+
+  @@index([status])
+  @@map("campaigns")
+}
+
+// Relação Many-to-Many entre Campanha e Empresa
+model CampaignCompany {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  status     String   @default("pending") // pending, called, converted, rejected
+  priority   Int      @default(0)
+
+  @@unique([campaignId, companyId])
+  @@index([campaignId])
+  @@index([companyId])
+  @@index([status])
+  @@map("campaign_companies")
+}
+
+// Tags para segmentação
+model Tag {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  name      String   @unique @db.VarChar(100)
+  color     String?  @db.VarChar(7) // Hex color
+
+  companies CompanyTag[]
+
+  @@map("tags")
+}
+
+// Relação Many-to-Many entre Tag e Empresa
+model CompanyTag {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, tagId])
+  @@index([companyId])
+  @@index([tagId])
+  @@map("company_tags")
+}
