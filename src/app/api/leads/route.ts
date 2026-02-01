@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     const cnaePrincipal = searchParams.get('cnaePrincipal');
     const situacaoCadastral = searchParams.get('situacaoCadastral');
     const matrizFilial = searchParams.get('matrizFilial');
+    const email = searchParams.get('email');
+    const phone = searchParams.get('phone');
 
     // Construir where clause
     const where: any = {};
@@ -57,6 +59,32 @@ export async function GET(request: NextRequest) {
 
     if (matrizFilial) {
       where.matrizFilial = matrizFilial;
+    }
+
+    if (email) {
+      where.email = { contains: email, mode: 'insensitive' };
+    }
+
+    if (phone) {
+      // Remove formatação do telefone
+      const cleanPhone = phone.replace(/\D/g, '');
+
+      // Extrai DDD e número
+      if (cleanPhone.length >= 10) {
+        const ddd = cleanPhone.substring(0, 2);
+        const numero = cleanPhone.substring(2);
+
+        where.AND = [
+          { ddd1: ddd },
+          { telefone1: numero }
+        ];
+      } else if (cleanPhone.length >= 2) {
+        // Se tiver apenas DDD ou parte do número
+        where.OR = [
+          { ddd1: { contains: cleanPhone } },
+          { telefone1: { contains: cleanPhone } }
+        ];
+      }
     }
 
     // Buscar dados

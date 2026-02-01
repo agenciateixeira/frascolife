@@ -9,10 +9,35 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalLeads: 0,
+    ativas: 0,
+    suspensas: 0,
+    campanhas: 0,
+    ligacoes: 0
+  });
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
+
+  async function fetchStats() {
+    try {
+      const response = await fetch('/api/stats');
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  }
 
   async function checkAuth() {
     const supabase = createBrowserClient();
@@ -71,21 +96,21 @@ export default function DashboardPage() {
           {/* Card 1 */}
           <div className="bg-gradient-to-br from-[#25d366] to-[#20bd5a] rounded-lg p-6 text-white shadow-lg">
             <div className="text-sm font-medium opacity-90">Total de Leads</div>
-            <div className="text-3xl font-bold mt-2">1,000,000</div>
-            <div className="text-xs opacity-75 mt-1">CNPJs cadastrados</div>
+            <div className="text-3xl font-bold mt-2">{stats.totalLeads.toLocaleString('pt-BR')}</div>
+            <div className="text-xs opacity-75 mt-1">{stats.ativas.toLocaleString('pt-BR')} ativas • {stats.suspensas.toLocaleString('pt-BR')} suspensas</div>
           </div>
 
           {/* Card 2 */}
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white shadow-lg">
             <div className="text-sm font-medium opacity-90">Campanhas Ativas</div>
-            <div className="text-3xl font-bold mt-2">0</div>
+            <div className="text-3xl font-bold mt-2">{stats.campanhas}</div>
             <div className="text-xs opacity-75 mt-1">Em andamento</div>
           </div>
 
           {/* Card 3 */}
           <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white shadow-lg">
             <div className="text-sm font-medium opacity-90">Ligações Hoje</div>
-            <div className="text-3xl font-bold mt-2">0</div>
+            <div className="text-3xl font-bold mt-2">{stats.ligacoes}</div>
             <div className="text-xs opacity-75 mt-1">Nenhuma ligação registrada</div>
           </div>
         </div>

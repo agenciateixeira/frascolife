@@ -286,6 +286,199 @@ export default function LeadsPage() {
           </div>
         )}
 
+            {/* Seção: Identificação */}
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Identificação
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* CNPJ */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CNPJ
+                  </label>
+                  <Input
+                    placeholder="00.000.000/0000-00"
+                    value={filters.cnpj}
+                    onChange={(e) => handleFilterChange('cnpj', e.target.value)}
+                  />
+                </div>
+
+                {/* Razão Social */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Razão Social
+                  </label>
+                  <Input
+                    placeholder="Digite a razão social"
+                    value={filters.razaoSocial}
+                    onChange={(e) => handleFilterChange('razaoSocial', e.target.value)}
+                  />
+                </div>
+
+                {/* Nome Fantasia */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome Fantasia
+                  </label>
+                  <Input
+                    placeholder="Digite o nome fantasia"
+                    value={filters.nomeFantasia}
+                    onChange={(e) => handleFilterChange('nomeFantasia', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Contato */}
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Contato
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    Email
+                  </label>
+                  <Input
+                    type="email"
+                    placeholder="email@exemplo.com"
+                    value={filters.email}
+                    onChange={(e) => handleFilterChange('email', e.target.value)}
+                  />
+                </div>
+
+                {/* Telefone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    Telefone
+                  </label>
+                  <Input
+                    placeholder="(11) 98888-8888"
+                    value={filters.phone}
+                    onChange={(e) => handleFilterChange('phone', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Localização */}
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Localização
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+              {/* UF */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estado (UF)
+                </label>
+                <select
+                  className="w-full h-10 px-3 border border-gray-300 rounded-md text-sm"
+                  value={filters.uf}
+                  onChange={(e) => handleFilterChange('uf', e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  <option value="SP">São Paulo</option>
+                  <option value="RJ">Rio de Janeiro</option>
+                  <option value="MG">Minas Gerais</option>
+                  <option value="BA">Bahia</option>
+                  <option value="PR">Paraná</option>
+                  <option value="RS">Rio Grande do Sul</option>
+                  <option value="SC">Santa Catarina</option>
+                  {/* Adicionar outros estados */}
+                </select>
+              </div>
+
+                {/* Município */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Município
+                  </label>
+                  <Input
+                    placeholder="Digite o município"
+                    value={filters.municipio}
+                    onChange={(e) => handleFilterChange('municipio', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Dados Empresariais */}
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Dados Empresariais
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* CNAE */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CNAE Principal
+                  </label>
+                  <Input
+                    placeholder="Digite o código CNAE"
+                    value={filters.cnaePrincipal}
+                    onChange={(e) => handleFilterChange('cnaePrincipal', e.target.value)}
+                  />
+                </div>
+
+                {/* Situação Cadastral */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Situação
+                  </label>
+                  <select
+                    className="w-full h-10 px-3 border border-gray-300 rounded-md text-sm"
+                    value={filters.situacaoCadastral}
+                    onChange={(e) => handleFilterChange('situacaoCadastral', e.target.value)}
+                  >
+                    <option value="">Todas</option>
+                    <option value="ATIVA">Ativa</option>
+                    <option value="BAIXADA">Baixada</option>
+                    <option value="SUSPENSA">Suspensa</option>
+                  </select>
+                </div>
+
+                {/* Matriz/Filial */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo
+                  </label>
+                  <select
+                    className="w-full h-10 px-3 border border-gray-300 rounded-md text-sm"
+                    value={filters.matrizFilial}
+                    onChange={(e) => handleFilterChange('matrizFilial', e.target.value)}
+                  >
+                    <option value="">Todos</option>
+                    <option value="MATRIZ">Matriz</option>
+                    <option value="FILIAL">Filial</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                onClick={applyFilters}
+                className="bg-[#25d366] hover:bg-[#20bd5a] text-white"
+              >
+                Aplicar Filtros
+              </Button>
+              <Button
+                onClick={clearFilters}
+                variant="outline"
+                className="border-gray-300"
+              >
+                Limpar Filtros
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Tabela de Leads */}
         <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
           {loading ? (

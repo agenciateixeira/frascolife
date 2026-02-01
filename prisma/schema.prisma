@@ -33,6 +33,11 @@ model Company {
   // Atividade econômica
   cnaePrincipal     String? @db.Text
   cnaeSecundario    String? @db.Text
+  cnaesSecundarios  String? @db.Text
+  naturezaJuridica  String? @db.Text
+  porte             String? @db.Text
+  capitalSocial     String? @db.Text
+  dataSituacaoCadastral String? @db.Text
 
   // Endereço
   tipoLogradouro    String? @db.Text
