@@ -33,23 +33,29 @@ interface LeadDetailModalProps {
 export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDetailModalProps) {
   const [enriching, setEnriching] = useState(false);
   const [enrichmentStatus, setEnrichmentStatus] = useState<string | null>(null);
+  const [currentLead, setCurrentLead] = useState<Lead | null>(lead);
 
-  if (!isOpen || !lead) return null;
+  // Atualiza lead local quando prop mudar
+  if (lead && (!currentLead || currentLead.id !== lead.id)) {
+    setCurrentLead(lead);
+  }
+
+  if (!isOpen || !currentLead) return null;
 
   async function handleEnrichData() {
-    if (!lead) {
+    if (!currentLead) {
       console.error('[MODAL] Lead is null');
       return;
     }
 
-    console.log('[MODAL] Starting enrichment for:', lead.cnpj);
+    console.log('[MODAL] Starting enrichment for:', currentLead.cnpj);
     setEnriching(true);
     setEnrichmentStatus(null);
 
     try {
       const payload = {
-        cnpj: lead.cnpj,
-        companyId: lead.id
+        cnpj: currentLead.cnpj,
+        companyId: currentLead.id
       };
 
       console.log('[MODAL] Sending request:', payload);
@@ -68,13 +74,23 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
       if (response.ok) {
         console.log('[MODAL] Success!');
         setEnrichmentStatus('Dados atualizados com sucesso!');
+
+        // Atualiza os dados do lead localmente imediatamente
+        if (data.data) {
+          setCurrentLead({
+            ...currentLead,
+            ...data.data
+          });
+        }
+
         if (onDataUpdated) {
           onDataUpdated();
         }
-        // Fecha o modal e reabre para mostrar dados atualizados
+
+        // Não fecha mais o modal - dados atualizados aparecem imediatamente
         setTimeout(() => {
-          onClose();
-        }, 1500);
+          setEnrichmentStatus(null);
+        }, 3000);
       } else {
         console.error('[MODAL] Error:', data.error);
         setEnrichmentStatus(data.error || 'Erro ao enriquecer dados');
@@ -117,10 +133,10 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                {lead.razaoSocial || 'Empresa'}
+                {currentLead.razaoSocial || 'Empresa'}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                CNPJ: {formatCNPJ(lead.cnpj)}
+                CNPJ: {formatCNPJ(currentLead.cnpj)}
               </p>
             </div>
             <button
@@ -154,43 +170,43 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Razão Social
                   </label>
-                  <p className="text-sm text-gray-900">{lead.razaoSocial || '-'}</p>
+                  <p className="text-sm text-gray-900">{currentLead.razaoSocial || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Nome Fantasia
                   </label>
-                  <p className="text-sm text-gray-900">{lead.nomeFantasia || '-'}</p>
+                  <p className="text-sm text-gray-900">{currentLead.nomeFantasia || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     CNPJ
                   </label>
-                  <p className="text-sm text-gray-900 font-mono">{formatCNPJ(lead.cnpj)}</p>
+                  <p className="text-sm text-gray-900 font-mono">{formatCNPJ(currentLead.cnpj)}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Situação Cadastral
                   </label>
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    lead.situacaoCadastral === 'ATIVA'
+                    currentLead.situacaoCadastral === 'ATIVA'
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {lead.situacaoCadastral}
+                    {currentLead.situacaoCadastral}
                   </span>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Tipo
                   </label>
-                  <p className="text-sm text-gray-900">{lead.matrizFilial}</p>
+                  <p className="text-sm text-gray-900">{currentLead.matrizFilial}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     CNAE Principal
                   </label>
-                  <p className="text-sm text-gray-900">{lead.cnaePrincipal || '-'}</p>
+                  <p className="text-sm text-gray-900">{currentLead.cnaePrincipal || '-'}</p>
                 </div>
               </div>
             </div>
@@ -205,37 +221,37 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Logradouro
                   </label>
-                  <p className="text-sm text-gray-900">{lead.logradouro || '-'}</p>
+                  <p className="text-sm text-gray-900">{currentLead.logradouro || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Número
                   </label>
-                  <p className="text-sm text-gray-900">{lead.numero || '-'}</p>
+                  <p className="text-sm text-gray-900">{currentLead.numero || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Bairro
                   </label>
-                  <p className="text-sm text-gray-900">{lead.bairro || '-'}</p>
+                  <p className="text-sm text-gray-900">{currentLead.bairro || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     CEP
                   </label>
-                  <p className="text-sm text-gray-900 font-mono">{formatCEP(lead.cep)}</p>
+                  <p className="text-sm text-gray-900 font-mono">{formatCEP(currentLead.cep)}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Município
                   </label>
-                  <p className="text-sm text-gray-900">{lead.municipio || '-'}</p>
+                  <p className="text-sm text-gray-900">{currentLead.municipio || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     UF
                   </label>
-                  <p className="text-sm text-gray-900">{lead.uf || '-'}</p>
+                  <p className="text-sm text-gray-900">{currentLead.uf || '-'}</p>
                 </div>
               </div>
             </div>
@@ -250,13 +266,13 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Telefone Principal
                   </label>
-                  <p className="text-sm text-gray-900">{formatPhone(lead.ddd1, lead.telefone1)}</p>
+                  <p className="text-sm text-gray-900">{formatPhone(currentLead.ddd1, currentLead.telefone1)}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Email
                   </label>
-                  <p className="text-sm text-gray-900 break-all">{lead.email || '-'}</p>
+                  <p className="text-sm text-gray-900 break-all">{currentLead.email || '-'}</p>
                 </div>
               </div>
             </div>

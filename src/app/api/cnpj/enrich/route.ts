@@ -29,7 +29,7 @@ interface BrasilAPIResponse {
   capital_social: number;
   porte: string;
   natureza_juridica: string;
-  situacao_cadastral: string;
+  situacao_cadastral: string | number; // Pode vir como número ou string
   data_situacao_cadastral: string;
   data_inicio_atividade: string;
   qsa?: Array<{
@@ -59,27 +59,83 @@ export async function POST(request: NextRequest) {
     const cleanCNPJ = cnpj.replace(/\D/g, '');
     console.log(`[ENRICH] Clean CNPJ: ${cleanCNPJ}`);
 
-    // Consulta BrasilAPI
+    // Consulta BrasilAPI com retry
     console.log(`[ENRICH] Fetching from BrasilAPI...`);
-    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
 
-    console.log(`[ENRICH] BrasilAPI status: ${response.status}`);
+    let response;
+    let lastError;
+    const maxRetries = 3;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[ENRICH] BrasilAPI error: ${errorText}`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[ENRICH] Attempt ${attempt}/${maxRetries}`);
 
-      if (response.status === 404) {
-        return NextResponse.json(
-          { error: 'CNPJ não encontrado na Receita Federal' },
-          { status: 404 }
-        );
+        response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Cache-Control': 'no-cache',
+            'Referer': 'https://brasilapi.com.br/'
+          }
+        });
+
+        console.log(`[ENRICH] BrasilAPI status: ${response.status}`);
+
+        if (response.ok) {
+          break; // Success!
+        }
+
+        if (response.status === 404) {
+          return NextResponse.json(
+            { error: 'CNPJ não encontrado na Receita Federal' },
+            { status: 404 }
+          );
+        }
+
+        const errorText = await response.text();
+        console.error(`[ENRICH] Attempt ${attempt} failed with status ${response.status}: ${errorText}`);
+        lastError = errorText;
+
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries) {
+          const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+          console.log(`[ENRICH] Waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      } catch (fetchError: any) {
+        console.error(`[ENRICH] Fetch error on attempt ${attempt}:`, fetchError.message);
+        lastError = fetchError.message;
+
+        if (attempt < maxRetries) {
+          const waitTime = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
       }
-      throw new Error(`BrasilAPI retornou status ${response.status}: ${errorText}`);
+    }
+
+    if (!response || !response.ok) {
+      throw new Error(`BrasilAPI falhou após ${maxRetries} tentativas. Último erro: ${lastError}`);
     }
 
     const data: BrasilAPIResponse = await response.json();
     console.log('[ENRICH] BrasilAPI data received:', Object.keys(data));
+
+    // Mapeia código de situação cadastral para texto
+    const mapSituacaoCadastral = (codigo: string | number): string => {
+      const codigoStr = typeof codigo === 'number' ? codigo.toString().padStart(2, '0') : codigo;
+
+      const mapa: Record<string, string> = {
+        '01': 'NULA',
+        '02': 'ATIVA',
+        '03': 'SUSPENSA',
+        '04': 'INAPTA',
+        '08': 'BAIXADA',
+        // Adicione outros códigos conforme necessário
+      };
+
+      return mapa[codigoStr] || 'ATIVA'; // Default para ATIVA se não encontrar
+    };
 
     // Extrai telefones do formato DDD + Telefone
     const extractPhone = (dddTelefone: string) => {
@@ -101,7 +157,7 @@ export async function POST(request: NextRequest) {
     const updateData: any = {
       razaoSocial: data.razao_social || null,
       nomeFantasia: data.nome_fantasia || null,
-      situacaoCadastral: data.situacao_cadastral || null,
+      situacaoCadastral: mapSituacaoCadastral(data.situacao_cadastral),
       cnaePrincipal: data.cnae_fiscal ? data.cnae_fiscal.toString() : null,
       logradouro: data.logradouro || null,
       numero: data.numero || null,
