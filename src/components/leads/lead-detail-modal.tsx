@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { X, RefreshCw } from 'lucide-react';
+import { X, RefreshCw, Edit2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface Lead {
   id: string;
@@ -34,10 +35,14 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
   const [enriching, setEnriching] = useState(false);
   const [enrichmentStatus, setEnrichmentStatus] = useState<string | null>(null);
   const [currentLead, setCurrentLead] = useState<Lead | null>(lead);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState<any>({});
 
   // Atualiza lead local quando prop mudar
   if (lead && (!currentLead || currentLead.id !== lead.id)) {
     setCurrentLead(lead);
+    setIsEditing(false);
+    setEditedData({});
   }
 
   if (!isOpen || !currentLead) return null;
@@ -115,6 +120,55 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
   function formatPhone(ddd: string | null, phone: string | null) {
     if (!ddd || !phone) return '-';
     return `(${ddd}) ${phone}`;
+  }
+
+  function handleEditToggle() {
+    if (isEditing) {
+      // Cancelar edição
+      setEditedData({});
+    }
+    setIsEditing(!isEditing);
+  }
+
+  async function handleSaveEdit() {
+    if (!currentLead) return;
+
+    try {
+      setEnrichmentStatus('Salvando...');
+
+      const response = await fetch('/api/leads/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentLead.id,
+          ...editedData
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setCurrentLead({ ...currentLead, ...editedData });
+        setIsEditing(false);
+        setEditedData({});
+        setEnrichmentStatus('Dados salvos com sucesso!');
+
+        if (onDataUpdated) {
+          onDataUpdated();
+        }
+
+        setTimeout(() => {
+          setEnrichmentStatus(null);
+        }, 3000);
+      } else {
+        setEnrichmentStatus('Erro ao salvar dados');
+      }
+    } catch (error: any) {
+      setEnrichmentStatus(`Erro: ${error.message}`);
+    }
+  }
+
+  function handleFieldChange(field: string, value: string) {
+    setEditedData({ ...editedData, [field]: value });
   }
 
   return (
@@ -258,21 +312,70 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
 
             {/* Contato */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
-                Contato
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                  Contato
+                </h3>
+                {!isEditing && (
+                  <button
+                    onClick={handleEditToggle}
+                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    Editar
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    DDD
+                  </label>
+                  {isEditing ? (
+                    <Input
+                      type="text"
+                      placeholder="11"
+                      maxLength={2}
+                      defaultValue={currentLead.ddd1 || ''}
+                      onChange={(e) => handleFieldChange('ddd1', e.target.value)}
+                      className="text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900">{currentLead.ddd1 || '-'}</p>
+                  )}
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Telefone Principal
                   </label>
-                  <p className="text-sm text-gray-900">{formatPhone(currentLead.ddd1, currentLead.telefone1)}</p>
+                  {isEditing ? (
+                    <Input
+                      type="text"
+                      placeholder="987654321"
+                      maxLength={9}
+                      defaultValue={currentLead.telefone1 || ''}
+                      onChange={(e) => handleFieldChange('telefone1', e.target.value)}
+                      className="text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900">{currentLead.telefone1 || '-'}</p>
+                  )}
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-xs font-medium text-gray-500 mb-1">
                     Email
                   </label>
-                  <p className="text-sm text-gray-900 break-all">{currentLead.email || '-'}</p>
+                  {isEditing ? (
+                    <Input
+                      type="email"
+                      placeholder="contato@empresa.com.br"
+                      defaultValue={currentLead.email || ''}
+                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      className="text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900 break-all">{currentLead.email || '-'}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -280,37 +383,63 @@ export function LeadDetailModal({ lead, isOpen, onClose, onDataUpdated }: LeadDe
 
           {/* Footer */}
           <div className="flex items-center justify-between p-6 border-t border-gray-200">
-            <Button
-              onClick={handleEnrichData}
-              disabled={enriching}
-              variant="outline"
-              className="border-blue-300 text-blue-600 hover:bg-blue-50"
-            >
-              {enriching ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Enriquecendo...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Enriquecer Dados
-                </>
-              )}
-            </Button>
+            {!isEditing ? (
+              <>
+                <Button
+                  onClick={handleEnrichData}
+                  disabled={enriching}
+                  variant="outline"
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  {enriching ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Enriquecendo...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Enriquecer Dados
+                    </>
+                  )}
+                </Button>
 
-            <div className="flex gap-3">
-              <Button
-                onClick={onClose}
-                variant="outline"
-                className="border-gray-300"
-              >
-                Fechar
-              </Button>
-              <Button className="bg-[#25d366] hover:bg-[#20bd5a] text-white">
-                Iniciar Contato
-              </Button>
-            </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={onClose}
+                    variant="outline"
+                    className="border-gray-300"
+                  >
+                    Fechar
+                  </Button>
+                  <Button className="bg-[#25d366] hover:bg-[#20bd5a] text-white">
+                    Iniciar Contato
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-sm text-gray-600">
+                  Editando informações de contato
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleEditToggle}
+                    variant="outline"
+                    className="border-gray-300"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSaveEdit}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Salvar
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

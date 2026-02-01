@@ -120,6 +120,10 @@ export async function POST(request: NextRequest) {
 
     const data: BrasilAPIResponse = await response.json();
     console.log('[ENRICH] BrasilAPI data received:', Object.keys(data));
+    console.log('[ENRICH] Telefone 1:', JSON.stringify(data.ddd_telefone_1));
+    console.log('[ENRICH] Telefone 2:', JSON.stringify(data.ddd_telefone_2));
+    console.log('[ENRICH] Email:', JSON.stringify(data.email));
+    console.log('[ENRICH] Nome Fantasia:', JSON.stringify(data.nome_fantasia));
 
     // Mapeia código de situação cadastral para texto
     const mapSituacaoCadastral = (codigo: string | number): string => {
@@ -153,34 +157,72 @@ export async function POST(request: NextRequest) {
     const phone1 = extractPhone(data.ddd_telefone_1);
     const phone2 = data.ddd_telefone_2 ? extractPhone(data.ddd_telefone_2) : { ddd: null, telefone: null };
 
-    // Prepara dados para atualização
+    // Busca dados existentes se companyId foi fornecido
+    let existingData: any = null;
+    if (companyId) {
+      try {
+        existingData = await prisma.company.findUnique({
+          where: { id: companyId }
+        });
+        console.log('[ENRICH] Existing data loaded for merge');
+      } catch (error) {
+        console.error('[ENRICH] Error loading existing data:', error);
+      }
+    }
+
+    // Helper para mesclar dados (mantém valor antigo se novo for null/undefined/vazio)
+    const mergeField = (newValue: any, existingValue: any) => {
+      // Trata string vazia como null
+      const normalizedNew = (typeof newValue === 'string' && newValue.trim() === '') ? null : newValue;
+
+      // Se o novo valor existe e não é null/undefined, usa ele
+      if (normalizedNew !== null && normalizedNew !== undefined) {
+        return normalizedNew;
+      }
+
+      // Senão, mantém o valor existente
+      return existingValue || null;
+    };
+
+    // Prepara dados para atualização com merge inteligente
     const updateData: any = {
-      razaoSocial: data.razao_social || null,
-      nomeFantasia: data.nome_fantasia || null,
+      razaoSocial: mergeField(data.razao_social, existingData?.razaoSocial),
+      nomeFantasia: mergeField(data.nome_fantasia, existingData?.nomeFantasia),
       situacaoCadastral: mapSituacaoCadastral(data.situacao_cadastral),
-      cnaePrincipal: data.cnae_fiscal ? data.cnae_fiscal.toString() : null,
-      logradouro: data.logradouro || null,
-      numero: data.numero || null,
-      complemento: data.complemento || null,
-      bairro: data.bairro || null,
-      cep: data.cep?.replace(/\D/g, '') || null,
-      uf: data.uf || null,
-      municipio: data.municipio || null,
-      ddd1: phone1.ddd,
-      telefone1: phone1.telefone,
-      ddd2: phone2.ddd,
-      telefone2: phone2.telefone,
-      email: data.email || null,
-      naturezaJuridica: data.natureza_juridica || null,
-      porte: data.porte || null,
-      capitalSocial: data.capital_social ? data.capital_social.toString() : null,
-      dataAbertura: data.data_inicio_atividade || null,
-      dataSituacaoCadastral: data.data_situacao_cadastral || null,
-      cnaesSecundarios: data.cnaes_secundarios
-        ? data.cnaes_secundarios.map(c => `${c.codigo} - ${c.descricao}`).join('; ')
-        : null,
+      cnaePrincipal: mergeField(
+        data.cnae_fiscal ? data.cnae_fiscal.toString() : null,
+        existingData?.cnaePrincipal
+      ),
+      logradouro: mergeField(data.logradouro, existingData?.logradouro),
+      numero: mergeField(data.numero, existingData?.numero),
+      complemento: mergeField(data.complemento, existingData?.complemento),
+      bairro: mergeField(data.bairro, existingData?.bairro),
+      cep: mergeField(data.cep?.replace(/\D/g, ''), existingData?.cep),
+      uf: mergeField(data.uf, existingData?.uf),
+      municipio: mergeField(data.municipio, existingData?.municipio),
+      ddd1: mergeField(phone1.ddd, existingData?.ddd1),
+      telefone1: mergeField(phone1.telefone, existingData?.telefone1),
+      ddd2: mergeField(phone2.ddd, existingData?.ddd2),
+      telefone2: mergeField(phone2.telefone, existingData?.telefone2),
+      email: mergeField(data.email, existingData?.email),
+      naturezaJuridica: mergeField(data.natureza_juridica, existingData?.naturezaJuridica),
+      porte: mergeField(data.porte, existingData?.porte),
+      capitalSocial: mergeField(
+        data.capital_social ? data.capital_social.toString() : null,
+        existingData?.capitalSocial
+      ),
+      dataAbertura: mergeField(data.data_inicio_atividade, existingData?.dataAbertura),
+      dataSituacaoCadastral: mergeField(data.data_situacao_cadastral, existingData?.dataSituacaoCadastral),
+      cnaesSecundarios: mergeField(
+        data.cnaes_secundarios
+          ? data.cnaes_secundarios.map(c => `${c.codigo} - ${c.descricao}`).join('; ')
+          : null,
+        existingData?.cnaesSecundarios
+      ),
       updatedAt: new Date()
     };
+
+    console.log('[ENRICH] Merged update data prepared');
 
     // Atualiza no banco de dados se companyId foi fornecido
     if (companyId) {
