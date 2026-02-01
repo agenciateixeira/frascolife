@@ -16,22 +16,22 @@ datasource db {
 
 model User {
   id            String    @id @default(cuid())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   // Dados básicos (Supabase Auth)
-  supabaseId    String    @unique
+  supabaseId    String    @unique @map("supabase_id")
   email         String    @unique
-  fullName      String?
+  fullName      String?   @map("full_name")
   avatar        String?
   phone         String?
 
   // Permissões e Acesso
   role          UserRole  @default(SALES_REP)
-  teamId        String?
+  teamId        String?   @map("team_id")
   team          Team?     @relation(fields: [teamId], references: [id])
-  isActive      Boolean   @default(true)
-  lastLoginAt   DateTime?
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
 
   // Relacionamentos
   assignedLeads     Lead[]
@@ -60,8 +60,8 @@ enum UserRole {
 
 model Team {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   name        String
   description String?
@@ -79,30 +79,30 @@ model Team {
 
 model Lead {
   id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Dados da Empresa (CNPJ)
   cnpj              String   @unique @db.Text
-  cnpjBase          String   @db.Text
-  cnpjOrder         String   @db.Text
-  cnpjDv            String   @db.Text
-  razaoSocial       String?  @db.Text
-  nomeFantasia      String?  @db.Text
-  situacaoCadastral String   @db.Text
-  cnaePrincipal     String?  @db.Text
-  cnaeSecundario    String?  @db.Text
+  cnpjBase          String   @db.Text @map("cnpj_base")
+  cnpjOrder         String   @db.Text @map("cnpj_order")
+  cnpjDv            String   @db.Text @map("cnpj_dv")
+  razaoSocial       String?  @db.Text @map("razao_social")
+  nomeFantasia      String?  @db.Text @map("nome_fantasia")
+  situacaoCadastral String   @db.Text @map("situacao_cadastral")
+  cnaePrincipal     String?  @db.Text @map("cnae_principal")
+  cnaeSecundario    String?  @db.Text @map("cnae_secundario")
   cnaesSecundarios  String?  @db.Text @map("cnaes_secundarios")
   porte             String?  @db.Text
   naturezaJuridica  String?  @db.Text @map("natureza_juridica")
   capitalSocial     String?  @db.Text @map("capital_social")
-  dataAbertura      String?  @db.Text
-  dataSituacao      String?  @db.Text
+  dataAbertura      String?  @db.Text @map("data_abertura")
+  dataSituacao      String?  @db.Text @map("data_situacao")
   dataSituacaoCadastral String? @db.Text @map("data_situacao_cadastral")
-  matrizFilial      String   @db.Text
+  matrizFilial      String   @db.Text @map("matriz_filial")
 
   // Endereço
-  tipoLogradouro    String?  @db.Text
+  tipoLogradouro    String?  @db.Text @map("tipo_logradouro")
   logradouro        String?  @db.Text
   numero            String?  @db.Text
   complemento       String?  @db.Text
@@ -116,7 +116,7 @@ model Lead {
   telefone1         String?  @db.Text
   ddd2              String?  @db.Text
   telefone2         String?  @db.Text
-  dddFax            String?  @db.Text
+  dddFax            String?  @db.Text @map("ddd_fax")
   fax               String?  @db.Text
   email             String?  @db.Text
 
@@ -126,25 +126,25 @@ model Lead {
   source        LeadSource   @default(MANUAL)
 
   // Relacionamento com vendedor
-  assignedToId  String?
-  assignedTo    User?        @relation(fields: [assignedToId], references: [id])
-  assignedAt    DateTime?
+  assignedToId  String?   @map("assigned_to_id")
+  assignedTo    User?     @relation(fields: [assignedToId], references: [id])
+  assignedAt    DateTime? @map("assigned_at")
 
   // Contato Principal (Pessoa)
-  contactName       String?  @db.Text
-  contactRole       String?  @db.Text
-  contactPhone      String?  @db.Text
-  contactEmail      String?  @db.Text
-  contactLinkedIn   String?  @db.Text
+  contactName       String?  @db.Text @map("contact_name")
+  contactRole       String?  @db.Text @map("contact_role")
+  contactPhone      String?  @db.Text @map("contact_phone")
+  contactEmail      String?  @db.Text @map("contact_email")
+  contactLinkedIn   String?  @db.Text @map("contact_linked_in")
 
   // Qualificação
-  isQualified       Boolean   @default(false)
-  qualifiedAt       DateTime?
-  disqualifiedReason String? @db.Text
+  isQualified       Boolean   @default(false) @map("is_qualified")
+  qualifiedAt       DateTime? @map("qualified_at")
+  disqualifiedReason String? @db.Text @map("disqualified_reason")
 
   // Estimativas
-  estimatedRevenue  Decimal?  @db.Decimal(12, 2)
-  estimatedCloseDate DateTime?
+  estimatedRevenue  Decimal?  @db.Decimal(12, 2) @map("estimated_revenue")
+  estimatedCloseDate DateTime? @map("estimated_close_date")
   probability       Int?      // 0-100%
 
   // Relacionamentos
@@ -198,26 +198,26 @@ enum LeadSource {
 
 model Opportunity {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   name        String   @db.Text
   description String?  @db.Text
 
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   stage       OpportunityStage @default(PROSPECTING)
   probability Int      @default(10)
 
   value       Decimal  @db.Decimal(12, 2)
-  expectedCloseDate DateTime?
-  closedAt    DateTime?
-  wonReason   String?  @db.Text
-  lostReason  String?  @db.Text
+  expectedCloseDate DateTime? @map("expected_close_date")
+  closedAt    DateTime? @map("closed_at")
+  wonReason   String?  @db.Text @map("won_reason")
+  lostReason  String?  @db.Text @map("lost_reason")
 
-  assignedToId String?
-  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
+  assignedToId String?  @map("assigned_to_id")
+  assignedTo   User?    @relation(fields: [assignedToId], references: [id])
 
   products    OpportunityProduct[]
   activities  Activity[]
@@ -242,14 +242,14 @@ enum OpportunityStage {
 
 model Product {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   name        String   @db.Text
   description String?  @db.Text
   sku         String?  @unique
   price       Decimal  @db.Decimal(12, 2)
-  isActive    Boolean  @default(true)
+  isActive    Boolean  @default(true) @map("is_active")
 
   opportunities OpportunityProduct[]
 
@@ -258,18 +258,18 @@ model Product {
 
 model OpportunityProduct {
   id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
+  createdAt     DateTime @default(now()) @map("created_at")
 
-  opportunityId String
+  opportunityId String      @map("opportunity_id")
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
-  productId     String
-  product       Product  @relation(fields: [productId], references: [id])
+  productId     String  @map("product_id")
+  product       Product @relation(fields: [productId], references: [id])
 
-  quantity      Int      @default(1)
-  unitPrice     Decimal  @db.Decimal(12, 2)
-  discount      Decimal  @default(0) @db.Decimal(5, 2)
-  total         Decimal  @db.Decimal(12, 2)
+  quantity      Int     @default(1)
+  unitPrice     Decimal @db.Decimal(12, 2) @map("unit_price")
+  discount      Decimal @default(0) @db.Decimal(5, 2)
+  total         Decimal @db.Decimal(12, 2)
 
   @@unique([opportunityId, productId])
   @@map("opportunity_products")
@@ -281,20 +281,20 @@ model OpportunityProduct {
 
 model Activity {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
 
   type        ActivityType
   title       String   @db.Text
   description String?  @db.Text
 
-  leadId      String?
-  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId      String?      @map("lead_id")
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  opportunityId String?
+  opportunityId String?    @map("opportunity_id")
   opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  userId      String       @map("user_id")
+  user        User         @relation(fields: [userId], references: [id])
 
   metadata    Json?
 
@@ -324,27 +324,27 @@ enum ActivityType {
 
 model Call {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  userId      String
+  userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id])
 
   direction   CallDirection
   status      CallStatus
   duration    Int?
-  startedAt   DateTime?
-  endedAt     DateTime?
+  startedAt   DateTime? @map("started_at")
+  endedAt     DateTime? @map("ended_at")
 
-  twilioCallSid String? @unique
-  fromNumber    String  @db.Text
-  toNumber      String  @db.Text
+  twilioCallSid String? @unique @map("twilio_call_sid")
+  fromNumber    String  @db.Text @map("from_number")
+  toNumber      String  @db.Text @map("to_number")
 
-  recordingUrl  String?  @db.Text
-  recordingSid  String?  @db.Text
+  recordingUrl  String?  @db.Text @map("recording_url")
+  recordingSid  String?  @db.Text @map("recording_sid")
 
   transcription String?  @db.Text
   summary       String?  @db.Text
@@ -398,37 +398,37 @@ enum Sentiment {
 
 model Email {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  userId      String
+  userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id])
 
   direction   EmailDirection
   subject     String   @db.Text
   body        String   @db.Text
-  htmlBody    String?  @db.Text
+  htmlBody    String?  @db.Text @map("html_body")
 
-  fromEmail   String   @db.Text
-  toEmail     String   @db.Text
-  ccEmails    String[]
-  bccEmails   String[]
+  fromEmail   String   @db.Text @map("from_email")
+  toEmail     String   @db.Text @map("to_email")
+  ccEmails    String[] @map("cc_emails")
+  bccEmails   String[] @map("bcc_emails")
 
   status      EmailStatus @default(DRAFT)
-  sentAt      DateTime?
-  deliveredAt DateTime?
-  openedAt    DateTime?
-  clickedAt   DateTime?
-  bouncedAt   DateTime?
+  sentAt      DateTime? @map("sent_at")
+  deliveredAt DateTime? @map("delivered_at")
+  openedAt    DateTime? @map("opened_at")
+  clickedAt   DateTime? @map("clicked_at")
+  bouncedAt   DateTime? @map("bounced_at")
 
   opens       Int      @default(0)
   clicks      Int      @default(0)
 
-  messageId   String?  @unique
-  templateId  String?  @db.Text
+  messageId   String?  @unique @map("message_id")
+  templateId  String?  @db.Text @map("template_id")
 
   attachments EmailAttachment[]
 
@@ -457,14 +457,14 @@ enum EmailStatus {
 
 model EmailAttachment {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  emailId     String
-  email       Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  emailId     String @map("email_id")
+  email       Email  @relation(fields: [emailId], references: [id], onDelete: Cascade)
 
-  filename    String   @db.Text
+  filename    String @db.Text
   filesize    Int
-  contentType String   @db.Text
+  contentType String @db.Text @map("content_type")
   url         String   @db.Text
 
   @@index([emailId])
@@ -473,8 +473,8 @@ model EmailAttachment {
 
 model EmailTemplate {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   name        String   @db.Text
   subject     String   @db.Text
@@ -495,8 +495,8 @@ model EmailTemplate {
 
 model WhatsAppMessage {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   leadId      String
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
@@ -506,21 +506,21 @@ model WhatsAppMessage {
 
   direction   MessageDirection
   content     String   @db.Text
-  contentType MessageContentType @default(TEXT)
+  contentType MessageContentType @default(TEXT) @map("content_type")
 
-  fromNumber  String   @db.Text
-  toNumber    String   @db.Text
+  fromNumber  String   @db.Text @map("from_number")
+  toNumber    String   @db.Text @map("to_number")
 
   status      MessageStatus @default(PENDING)
   sentAt      DateTime?
   deliveredAt DateTime?
-  readAt      DateTime?
-  failedAt    DateTime?
+  readAt      DateTime? @map("read_at")
+  failedAt    DateTime? @map("failed_at")
 
-  twilioMessageSid String? @unique
-  errorMessage     String? @db.Text
+  twilioMessageSid String? @unique @map("twilio_message_sid")
+  errorMessage     String? @db.Text @map("error_message")
 
-  mediaUrl    String?  @db.Text
+  mediaUrl    String?  @db.Text @map("media_url")
 
   @@index([leadId])
   @@index([userId])
@@ -552,15 +552,15 @@ enum MessageStatus {
 
 model WhatsAppTemplate {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   name        String   @db.Text
   content     String   @db.Text
   category    String?  @db.Text
   isActive    Boolean  @default(true)
 
-  twilioSid   String?  @unique
+  twilioSid   String?  @unique @map("twilio_sid")
 
   @@map("whatsapp_templates")
 }
@@ -571,8 +571,8 @@ model WhatsAppTemplate {
 
 model Task {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   title       String   @db.Text
   description String?  @db.Text
@@ -580,15 +580,15 @@ model Task {
   leadId      String?
   lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  assignedToId String
-  assignedTo   User    @relation(fields: [assignedToId], references: [id])
+  assignedToId String       @map("assigned_to_id")
+  assignedTo   User         @relation(fields: [assignedToId], references: [id])
 
-  dueDate     DateTime
-  priority    TaskPriority @default(MEDIUM)
-  status      TaskStatus   @default(TODO)
+  dueDate     DateTime      @map("due_date")
+  priority    TaskPriority  @default(MEDIUM)
+  status      TaskStatus    @default(TODO)
 
-  completedAt DateTime?
-  completedBy String?  @db.Text
+  completedAt DateTime?     @map("completed_at")
+  completedBy String?  @db.Text @map("completed_by")
 
   reminders   TaskReminder[]
 
@@ -615,15 +615,15 @@ enum TaskStatus {
 
 model TaskReminder {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  taskId      String
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId      String         @map("task_id")
+  task        Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
-  remindAt    DateTime
+  remindAt    DateTime       @map("remind_at")
   method      ReminderMethod @default(EMAIL)
-  sent        Boolean  @default(false)
-  sentAt      DateTime?
+  sent        Boolean        @default(false)
+  sentAt      DateTime?      @map("sent_at")
 
   @@index([taskId])
   @@index([remindAt])
@@ -642,18 +642,18 @@ enum ReminderMethod {
 
 model Note {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   content     String   @db.Text
 
   leadId      String
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdById String  @map("created_by_id")
+  createdBy   User    @relation(fields: [createdById], references: [id])
 
-  isPinned    Boolean  @default(false)
+  isPinned    Boolean @default(false) @map("is_pinned")
 
   @@index([leadId])
   @@index([createdById])
@@ -667,7 +667,7 @@ model Note {
 
 model Tag {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
 
   name        String   @unique
   color       String   @db.Text
@@ -680,13 +680,13 @@ model Tag {
 
 model LeadTag {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
 
   leadId      String
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  tagId       String
-  tag         Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId       String @map("tag_id")
+  tag         Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@unique([leadId, tagId])
   @@index([leadId])
@@ -700,8 +700,8 @@ model LeadTag {
 
 model Campaign {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   name        String   @db.Text
   description String?  @db.Text
@@ -709,21 +709,21 @@ model Campaign {
   type        CampaignType
   status      CampaignStatus @default(DRAFT)
 
-  startDate   DateTime?
-  endDate     DateTime?
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
 
-  ownerId     String
-  owner       User     @relation(fields: [ownerId], references: [id])
+  ownerId     String    @map("owner_id")
+  owner       User      @relation(fields: [ownerId], references: [id])
 
-  teamId      String?
-  team        Team?    @relation(fields: [teamId], references: [id])
+  teamId      String?   @map("team_id")
+  team        Team?     @relation(fields: [teamId], references: [id])
 
   filters     Json?
 
-  totalLeads      Int @default(0)
-  contactedLeads  Int @default(0)
-  qualifiedLeads  Int @default(0)
-  wonLeads        Int @default(0)
+  totalLeads      Int @default(0) @map("total_leads")
+  contactedLeads  Int @default(0) @map("contacted_leads")
+  qualifiedLeads  Int @default(0) @map("qualified_leads")
+  wonLeads        Int @default(0) @map("won_leads")
 
   leads       CampaignLead[]
 
@@ -751,20 +751,20 @@ enum CampaignStatus {
 
 model CampaignLead {
   id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  campaignId  String
+  campaignId  String   @map("campaign_id")
   campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   status      CampaignLeadStatus @default(PENDING)
   priority    Int      @default(0)
 
-  contactedAt DateTime?
-  respondedAt DateTime?
+  contactedAt DateTime? @map("contacted_at")
+  respondedAt DateTime? @map("responded_at")
   outcome     String?  @db.Text
 
   @@unique([campaignId, leadId])

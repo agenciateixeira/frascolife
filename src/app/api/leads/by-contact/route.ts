@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const companies = await prisma.company.findMany({
+    const companies = await prisma.lead.findMany({
       where,
       select: {
         id: true,

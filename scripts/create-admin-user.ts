@@ -1,5 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 
+// Set DATABASE_URL if not set
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'postgresql://postgres.hukbilmyblqlomoaiszm:Teixeira@2027@aws-0-sa-east-1.pooler.supabase.com:6543/postgres';
+}
+
 const prisma = new PrismaClient();
 
 async function main() {

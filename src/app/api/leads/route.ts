@@ -88,8 +88,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar dados
-    const [companies, total] = await Promise.all([
-      prisma.company.findMany({
+    const [leads, total] = await Promise.all([
+      prisma.lead.findMany({
         where,
         skip,
         take: limit,
@@ -113,12 +113,12 @@ export async function GET(request: NextRequest) {
           email: true,
         }
       }),
-      prisma.company.count({ where })
+      prisma.lead.count({ where })
     ]);
 
     return NextResponse.json({
       success: true,
-      data: companies,
+      data: leads,
       pagination: {
         page,
         limit,

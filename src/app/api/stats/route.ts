@@ -8,9 +8,9 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const [total, ativas, suspensas] = await Promise.all([
-      prisma.company.count(),
-      prisma.company.count({ where: { situacaoCadastral: 'ATIVA' } }),
-      prisma.company.count({ where: { situacaoCadastral: 'SUSPENSA' } })
+      prisma.lead.count(),
+      prisma.lead.count({ where: { situacaoCadastral: 'ATIVA' } }),
+      prisma.lead.count({ where: { situacaoCadastral: 'SUSPENSA' } })
     ]);
 
     return NextResponse.json({

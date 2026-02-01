@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     // Busca por email
     if (type === 'email' || type === 'all') {
-      const emailResults = await prisma.company.findMany({
+      const emailResults = await prisma.lead.findMany({
         where: {
           AND: [
             {
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     if (type === 'phone' || type === 'all') {
       const phoneQuery = query.replace(/\D/g, '');
 
-      const phoneResults = await prisma.company.findMany({
+      const phoneResults = await prisma.lead.findMany({
         where: {
           AND: [
             {
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     // Busca por razão social, nome fantasia, CNPJ
     if (type === 'all' || !type) {
-      const companyResults = await prisma.company.findMany({
+      const companyResults = await prisma.lead.findMany({
         where: {
           OR: [
             {

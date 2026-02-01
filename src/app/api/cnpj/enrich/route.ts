@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     let existingData: any = null;
     if (companyId) {
       try {
-        existingData = await prisma.company.findUnique({
+        existingData = await prisma.lead.findUnique({
           where: { id: companyId }
         });
         console.log('[ENRICH] Existing data loaded for merge');
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
     if (companyId) {
       console.log(`[ENRICH] Updating company ${companyId}...`);
       try {
-        await prisma.company.update({
+        await prisma.lead.update({
           where: { id: companyId },
           data: updateData
         });

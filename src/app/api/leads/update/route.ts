@@ -30,7 +30,7 @@ export async function PATCH(request: NextRequest) {
     console.log('[UPDATE] Clean data:', cleanData);
 
     // Atualiza no banco
-    const updated = await prisma.company.update({
+    const updated = await prisma.lead.update({
       where: { id },
       data: {
         ...cleanData,
@@ -38,7 +38,7 @@ export async function PATCH(request: NextRequest) {
       }
     });
 
-    console.log('[UPDATE] Company updated successfully');
+    console.log('[UPDATE] Lead updated successfully');
 
     return NextResponse.json({
       success: true,
