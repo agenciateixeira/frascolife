@@ -7,8 +7,9 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LeadDetailModal } from '@/components/leads/lead-detail-modal';
+import { AssignLeadModal } from '@/components/leads/assign-lead-modal';
 import { AdvancedFilter } from '@/components/leads/advanced-filter';
-import { Search, Filter, Download, X, ChevronLeft, ChevronRight, Mail, Phone } from 'lucide-react';
+import { Search, Filter, Download, X, ChevronLeft, ChevronRight, Mail, Phone, UserPlus } from 'lucide-react';
 
 interface Lead {
   id: string;
@@ -41,6 +42,8 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Array<{key: string, value: string, label: string}>>([]);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
   // Filtros
   const [filters, setFilters] = useState({
@@ -161,6 +164,43 @@ export default function LeadsPage() {
     setSelectedLead(null);
   }
 
+  function handleSelectLead(leadId: string) {
+    setSelectedLeadIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(leadId)) {
+        newSet.delete(leadId);
+      } else {
+        newSet.add(leadId);
+      }
+      return newSet;
+    });
+  }
+
+  function handleSelectAll() {
+    if (selectedLeadIds.size === leads.length) {
+      setSelectedLeadIds(new Set());
+    } else {
+      setSelectedLeadIds(new Set(leads.map(l => l.id)));
+    }
+  }
+
+  function handleOpenAssignModal() {
+    if (selectedLeadIds.size === 0) {
+      alert('Selecione pelo menos um lead');
+      return;
+    }
+    setIsAssignModalOpen(true);
+  }
+
+  function handleCloseAssignModal() {
+    setIsAssignModalOpen(false);
+  }
+
+  function handleLeadsAssigned() {
+    setSelectedLeadIds(new Set());
+    fetchLeads();
+  }
+
   function handleApplyFilters(newFilters: Record<string, string>) {
     // Atualiza os filtros
     setFilters(prev => ({ ...prev, ...newFilters }));
@@ -229,6 +269,16 @@ export default function LeadsPage() {
             </div>
 
             <div className="flex gap-3">
+              {selectedLeadIds.size > 0 && (
+                <Button
+                  onClick={handleOpenAssignModal}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Atribuir ({selectedLeadIds.size})
+                </Button>
+              )}
+
               <Button
                 onClick={() => setShowFilters(!showFilters)}
                 variant="outline"
@@ -302,6 +352,14 @@ export default function LeadsPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-6 py-3 w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeadIds.size === leads.length && leads.length > 0}
+                          onChange={handleSelectAll}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         CNPJ
                       </th>
@@ -329,10 +387,17 @@ export default function LeadsPage() {
                     {leads.map((lead) => (
                       <tr
                         key={lead.id}
-                        className="hover:bg-gray-50 cursor-pointer transition-colors"
-                        onClick={() => handleLeadClick(lead)}
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedLeadIds.has(lead.id)}
+                            onChange={() => handleSelectLead(lead.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 cursor-pointer" onClick={() => handleLeadClick(lead)}>
                           {formatCNPJ(lead.cnpj)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -424,6 +489,14 @@ export default function LeadsPage() {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onDataUpdated={fetchLeads}
+        />
+
+        {/* Modal de Atribuição de Leads */}
+        <AssignLeadModal
+          isOpen={isAssignModalOpen}
+          onClose={handleCloseAssignModal}
+          leadIds={Array.from(selectedLeadIds)}
+          onAssigned={handleLeadsAssigned}
         />
       </div>
     </DashboardLayout>

@@ -43,6 +43,8 @@ model User {
   notes             Note[]
   campaigns         Campaign[]
   assignedOpportunities Opportunity[]
+  pipelineOpportunities PipelineOpportunity[] @relation("PipelineOpportunityOwner")
+  pipelineHistory   PipelineStageHistory[] @relation("PipelineHistoryMover")
 
   @@index([supabaseId])
   @@index([teamId])
@@ -79,30 +81,30 @@ model Team {
 
 model Lead {
   id            String   @id @default(cuid())
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Dados da Empresa (CNPJ)
   cnpj              String   @unique @db.Text
-  cnpjBase          String   @db.Text @map("cnpj_base")
-  cnpjOrder         String   @db.Text @map("cnpj_order")
-  cnpjDv            String   @db.Text @map("cnpj_dv")
-  razaoSocial       String?  @db.Text @map("razao_social")
-  nomeFantasia      String?  @db.Text @map("nome_fantasia")
-  situacaoCadastral String   @db.Text @map("situacao_cadastral")
-  cnaePrincipal     String?  @db.Text @map("cnae_principal")
-  cnaeSecundario    String?  @db.Text @map("cnae_secundario")
+  cnpjBase          String   @db.Text
+  cnpjOrder         String   @db.Text
+  cnpjDv            String   @db.Text
+  razaoSocial       String?  @db.Text
+  nomeFantasia      String?  @db.Text
+  situacaoCadastral String   @db.Text
+  cnaePrincipal     String?  @db.Text
+  cnaeSecundario    String?  @db.Text
   cnaesSecundarios  String?  @db.Text @map("cnaes_secundarios")
   porte             String?  @db.Text
   naturezaJuridica  String?  @db.Text @map("natureza_juridica")
   capitalSocial     String?  @db.Text @map("capital_social")
-  dataAbertura      String?  @db.Text @map("data_abertura")
-  dataSituacao      String?  @db.Text @map("data_situacao")
+  dataAbertura      String?  @db.Text
+  dataSituacao      String?  @db.Text
   dataSituacaoCadastral String? @db.Text @map("data_situacao_cadastral")
-  matrizFilial      String   @db.Text @map("matriz_filial")
+  matrizFilial      String   @db.Text
 
   // Endereço
-  tipoLogradouro    String?  @db.Text @map("tipo_logradouro")
+  tipoLogradouro    String?  @db.Text
   logradouro        String?  @db.Text
   numero            String?  @db.Text
   complemento       String?  @db.Text
@@ -116,7 +118,7 @@ model Lead {
   telefone1         String?  @db.Text
   ddd2              String?  @db.Text
   telefone2         String?  @db.Text
-  dddFax            String?  @db.Text @map("ddd_fax")
+  dddFax            String?  @db.Text
   fax               String?  @db.Text
   email             String?  @db.Text
 
@@ -157,6 +159,7 @@ model Lead {
   tags              LeadTag[]
   opportunities     Opportunity[]
   campaignLeads     CampaignLead[]
+  pipelineOpportunities PipelineOpportunity[]
 
   @@index([stage])
   @@index([assignedToId])
@@ -498,10 +501,10 @@ model WhatsAppMessage {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  userId      String?
+  userId      String?  @map("user_id")
   user        User?    @relation(fields: [userId], references: [id])
 
   direction   MessageDirection
@@ -512,10 +515,10 @@ model WhatsAppMessage {
   toNumber    String   @db.Text @map("to_number")
 
   status      MessageStatus @default(PENDING)
-  sentAt      DateTime?
-  deliveredAt DateTime?
-  readAt      DateTime? @map("read_at")
-  failedAt    DateTime? @map("failed_at")
+  sentAt      DateTime?     @map("sent_at")
+  deliveredAt DateTime?     @map("delivered_at")
+  readAt      DateTime?     @map("read_at")
+  failedAt    DateTime?     @map("failed_at")
 
   twilioMessageSid String? @unique @map("twilio_message_sid")
   errorMessage     String? @db.Text @map("error_message")
@@ -577,7 +580,7 @@ model Task {
   title       String   @db.Text
   description String?  @db.Text
 
-  leadId      String?
+  leadId      String?  @map("lead_id")
   lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   assignedToId String       @map("assigned_to_id")
@@ -647,7 +650,7 @@ model Note {
 
   content     String   @db.Text
 
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   createdById String  @map("created_by_id")
@@ -682,7 +685,7 @@ model LeadTag {
   id          String   @id @default(cuid())
   createdAt   DateTime @default(now()) @map("created_at")
 
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   tagId       String @map("tag_id")
@@ -781,4 +784,134 @@ enum CampaignLeadStatus {
   QUALIFIED
   CONVERTED
   SKIPPED
+}
+
+// ============================================
+// MÓDULO: PIPELINES CUSTOMIZÁVEIS
+// ============================================
+
+model Pipeline {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  name        String   @db.Text
+  description String?  @db.Text
+  isDefault   Boolean  @default(false) @map("is_default")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  // Tipo de pipeline
+  type        PipelineType @default(SALES)
+
+  // Configurações
+  settings    Json?    // Configurações específicas (ex: campos obrigatórios, automações)
+
+  stages      PipelineStage[]
+  opportunities PipelineOpportunity[]
+
+  @@index([type])
+  @@index([isDefault])
+  @@map("pipelines")
+}
+
+enum PipelineType {
+  SALES       // Pipeline de vendas
+  LEADS       // Pipeline de leads
+  CUSTOM      // Pipeline customizado
+}
+
+model PipelineStage {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  pipelineId  String   @map("pipeline_id")
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  name        String   @db.Text
+  description String?  @db.Text
+  color       String   @default("#6B7280") @db.Text  // Cor hexadecimal
+  icon        String?  @db.Text                      // Nome do ícone lucide
+
+  // Ordenação e probabilidade
+  order       Int      // Ordem de exibição
+  probability Int      @default(0)  // 0-100%
+
+  // Configurações
+  isActive    Boolean  @default(true) @map("is_active")
+  isFinal     Boolean  @default(false) @map("is_final")  // Se é estágio final (won/lost)
+
+  // Rotting (oportunidades esquecidas)
+  rottingDays Int?     @map("rotting_days")  // Dias até considerar "rotting"
+
+  opportunities PipelineOpportunity[]
+
+  @@unique([pipelineId, order])
+  @@index([pipelineId])
+  @@index([order])
+  @@map("pipeline_stages")
+}
+
+model PipelineOpportunity {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  pipelineId  String   @map("pipeline_id")
+  pipeline    Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  stageId     String   @map("stage_id")
+  stage       PipelineStage @relation(fields: [stageId], references: [id])
+
+  leadId      String   @map("lead_id")
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  // Dados da oportunidade
+  title       String   @db.Text
+  description String?  @db.Text
+  value       Decimal  @default(0) @db.Decimal(12, 2)  // Valor estimado
+
+  // Datas importantes
+  expectedCloseDate DateTime? @map("expected_close_date")
+  enteredStageAt    DateTime  @default(now()) @map("entered_stage_at")
+
+  // Responsável
+  ownerId     String?  @map("owner_id")
+  owner       User?    @relation("PipelineOpportunityOwner", fields: [ownerId], references: [id])
+
+  // Resultado final
+  closedAt    DateTime? @map("closed_at")
+  closedReason String?  @db.Text @map("closed_reason")
+
+  // Analytics
+  customFields Json?   @map("custom_fields")  // Campos customizados
+
+  @@index([pipelineId])
+  @@index([stageId])
+  @@index([leadId])
+  @@index([ownerId])
+  @@index([expectedCloseDate])
+  @@map("pipeline_opportunities")
+}
+
+// Histórico de movimentações no pipeline
+model PipelineStageHistory {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  opportunityId String  @map("opportunity_id")
+
+  fromStageId String?  @map("from_stage_id")
+  toStageId   String   @map("to_stage_id")
+
+  movedById   String   @map("moved_by_id")
+  movedBy     User     @relation("PipelineHistoryMover", fields: [movedById], references: [id])
+
+  duration    Int?     // Tempo em dias no estágio anterior
+  notes       String?  @db.Text
+
+  @@index([opportunityId])
+  @@index([toStageId])
+  @@index([createdAt])
+  @@map("pipeline_stage_history")
 }

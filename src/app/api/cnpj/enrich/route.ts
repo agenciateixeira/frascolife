@@ -226,13 +226,26 @@ export async function POST(request: NextRequest) {
 
     // Atualiza no banco de dados se companyId foi fornecido
     if (companyId) {
-      console.log(`[ENRICH] Updating company ${companyId}...`);
+      console.log(`[ENRICH] Updating lead ${companyId}...`);
       try {
+        // Remove campos que não existem ou não devem ser atualizados
+        const {
+          id,
+          createdAt,
+          assignedToId,
+          assignedTo,
+          assignedAt,
+          stage,
+          score,
+          source,
+          ...safeUpdateData
+        } = updateData;
+
         await prisma.lead.update({
           where: { id: companyId },
-          data: updateData
+          data: safeUpdateData
         });
-        console.log('[ENRICH] Company updated successfully');
+        console.log('[ENRICH] Lead updated successfully');
       } catch (dbError: any) {
         console.error('[ENRICH] Database error:', dbError);
         throw new Error(`Erro ao atualizar banco de dados: ${dbError.message}`);
